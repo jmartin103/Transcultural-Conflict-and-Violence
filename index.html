@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Transcultural Conflict and Violence Image Search Engine</title>
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.0.min.js" charset="utf-8"></script>
+    <script src="https://code.jquery.com/jquery-3.4.0.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <div class="heading">
+      <h1>Transcultural Conflict and Violence Image Search Engine</h1>
+    </div>
+    <div class="date_field">
+      <label>Date: </label>
+      <select id="date_opt" onchange="getSelectedDateValue()">
+        <option value="on">On</option>
+        <option value="before">Before</option>
+        <option value="after">After</option>
+        <option value="between">Between</option>
+      </select>
+      <input type="date" id="date1"></input>
+      <input type="date" id="date2" disabled=disabled></input>
+    </div>
+    <div class="province_field">
+      <label for="province">Province: </label>
+      <select id="province">
+
+      </select>
+    </div>
+    <div class="exclude_violent_content">
+      <label for="vio_content_chkbx">Exclude Violent Content</label>
+      <input type="checkbox" id="vio_content_chkbx"></input>
+    </div>
+    <div class="search_button">
+      <button type="submit" onclick="query()">Search</button>
+    </div>
+    <div id="results_div">
+      <h3>Search Results</h3>
+    </div>
+    <script type="text/javascript">
+      function getSelectedDateValue() {
+        var selected = document.getElementById('date_opt').value;
+
+        if (selected === 'between') {
+          $('#date2').prop('disabled', false);
+        }
+        else {
+          $('#date2').prop('disabled', true);
+        }
+      }
+    </script>
+
+    <script type="text/javascript">
+      $(document).ready(function() {
+        $.ajax({
+          type: "GET",
+          contentType: "application/json",
+          url: "http://localhost:8000/provinces",
+          dataType: "json",
+          success: function(jsondata) {
+            $.each(jsondata.provinces, function(i, obj) {
+              var prov_data = "<option>" + obj.province + "</option>";
+              $(prov_data).appendTo('#province');
+            });
+          },
+          error: function(res) {
+            alert('Error');
+          }
+        });
+      });
+    </script>
+
+    <script type="text/javascript">
+      function query() {
+        var dateQuery = document.getElementById("date_opt").value;
+        var province = document.getElementById("province").value;
+        var violent = document.getElementById("vio_content_chkbx").checked;
+        var json_data = null;
+
+        if (dateQuery === 'between') {
+          var date1 = document.getElementById("date1").value;
+          var date2 = document.getElementById("date2").value;
+
+          json_data = {
+            "datequery": dateQuery,
+            "date1": date1,
+            "date2": date2,
+            "province": province,
+            "violent": violent
+          }
+        }
+
+        else {
+          var date1 = document.getElementById("date1").value;
+
+          json_data = {
+            "datequery": dateQuery,
+            "date1": date1,
+            "province": province,
+            "violent": violent
+          }
+        }
+
+        $.ajax({
+          type: "POST",
+          contentType: "application/json",
+          url: "http://localhost:8000/queries",
+          dataType: "json",
+          data: JSON.stringify(json_data),
+          success: function(jsondata) {
+            var result = "<table class=\"table\">";
+            result += "<tr><th>URL</th><th>Size</th><th>Created On</th><th>Tags</th></tr>";
+            var resarr = jsondata.results;
+
+            for (var i = 0; i < resarr.length; i++) {
+              var createdOn = resarr[i].createdOn.toString();
+              var createdOnStr = createdOn.substring(0, 4) + "-" + createdOn.substring(4, 6) + "-" + createdOn.substring(6, 8);
+              result += "<tr><td><a href=\"http://localhost:8000/images/"+resarr[i].url+
+                        ".png\" target=\"_blank\">"+resarr[i].url+"</a></td><td>"+resarr[i].size+"</td><td>"+
+                        createdOnStr+"</td><td>"+resarr[i].tags+"</td></tr>";
+            }
+            result += "</table>";
+            document.getElementById("results_div").innerHTML = result;
+          },
+          error: function(res) {
+            alert('Error');
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
